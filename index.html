@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a1a2e">
+    <title>Q-System Antrian Modern</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --accent: #f72585;
+            --dark-bg: #0f172a;
+            --card-bg: #1e293b;
+            --text-light: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--dark-bg);
+            color: var(--text-light);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- UTILS --- */
+        .hidden { display: none !important; }
+        .btn {
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-family: inherit;
+        }
+        .btn:active { transform: scale(0.95); }
+
+        /* --- INTRO / SETUP SCREEN --- */
+        #setup-screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            text-align: center;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        }
+
+        .logo { font-size: 3rem; margin-bottom: 1rem; }
+        .setup-title { font-size: 1.5rem; margin-bottom: 2rem; color: var(--text-muted); }
+        
+        .mode-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .mode-card {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 20px;
+            border: 2px solid rgba(255,255,255,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .mode-card:hover { border-color: var(--primary); transform: translateY(-5px); }
+        .mode-icon { font-size: 3rem; margin-bottom: 1rem; }
+        .mode-btn {
+            width: 100%;
+            padding: 1rem;
+            background: var(--primary);
+            color: white;
+            font-size: 1.1rem;
+            margin-top: 1rem;
+        }
+
+        /* --- OPERATOR MODE --- */
+        #operator-screen {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            background: #f1f5f9; /* Light background for operator visibility */
+            color: #1e293b;
+        }
+
+        .op-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            background: white;
+            padding: 1rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+
+        .grid-counters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .counter-card {
+            background: white;
+            border-radius: 20px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .counter-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            font-size: 1.2rem;
+        }
+
+        .current-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 4rem;
+            text-align: center;
+            color: var(--dark-bg);
+            margin: 1rem 0;
+            letter-spacing: -2px;
+        }
+
+        .counter-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.8rem;
+        }
+
+        .btn-next {
+            background: var(--primary);
+            color: white;
+            padding: 1rem;
+            font-size: 1.2rem;
+            grid-column: span 2;
+        }
+        
+        .btn-recall { background: var(--warning); color: white; padding: 0.8rem; }
+        .btn-reset { background: #ef4444; color: white; padding: 0.8rem; }
+
+        /* --- DISPLAY MODE (TV) --- */
+        #display-screen {
+            flex: 1;
+            display: flex;
+            flex-direction: row;
+            background: black;
+            height: 100vh;
+        }
+
+        .display-main {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+            position: relative;
+            border-right: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .display-sidebar {
+            flex: 1;
+            background: #0b1120;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid #334155;
+        }
+
+        .tv-label {
+            font-size: 2vw;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-bottom: 2rem;
+        }
+
+        .tv-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 18vw;
+            line-height: 1;
+            font-weight: 800;
+            color: white;
+            text-shadow: 0 0 50px rgba(67, 97, 238, 0.5);
+            margin-bottom: 1rem;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .tv-number.animate { transform: scale(1.2); color: var(--accent); }
+
+        .tv-counter-name {
+            font-size: 4vw;
+            background: var(--accent);
+            padding: 0.5rem 3rem;
+            border-radius: 50px;
+            font-weight: 700;
+            margin-top: 2rem;
+        }
+
+        .sidebar-title {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 1rem;
+        }
+
+        .history-item {
+            background: rgba(255,255,255,0.05);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .hist-num { font-family: 'JetBrains Mono'; font-size: 2rem; font-weight: bold; }
+        .hist-loc { color: var(--accent); font-weight: bold; }
+
+        /* --- TOAST & INSTALL BTN --- */
+        #install-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--success);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            z-index: 100;
+            font-size: 0.9rem;
+        }
+        
+        /* Mobile Display Adjustments */
+        @media (max-width: 768px) {
+            #display-screen { flex-direction: column; }
+            .display-main { flex: 3; border-right: none; border-bottom: 2px solid rgba(255,255,255,0.1); }
+            .display-sidebar { display: none; } /* Hide history on mobile display for cleaner look */
+            .tv-number { font-size: 25vw; }
+            .tv-counter-name { font-size: 8vw; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LAYAR 1: PILIH MODE -->
+    <div id="setup-screen">
+        <div class="logo">📡</div>
+        <h1 style="margin-bottom: 0.5rem;">Q-System</h1>
+        <p class="setup-title">Sistem Antrian Tanpa Server</p>
+        
+        <div class="mode-grid">
+            <!-- Kartu Operator -->
+            <div class="mode-card">
+                <div class="mode-icon">🖥️</div>
+                <h3>Mode Operator</h3>
+                <p style="color:#94a3b8; font-size: 0.9rem; margin-top:0.5rem;">Untuk petugas loket. Kontrol antrian dan panggil nomor.</p>
+                <button class="btn mode-btn" onclick="app.initOperator()">Masuk Operator</button>
+            </div>
+
+            <!-- Kartu Display -->
+            <div class="mode-card" style="border-color: var(--accent);">
+                <div class="mode-icon">📺</div>
+                <h3>Mode Display (TV)</h3>
+                <p style="color:#94a3b8; font-size: 0.9rem; margin-top:0.5rem;">Untuk layar monitor. Tampilan fullscreen dan suara.</p>
+                <button class="btn mode-btn" style="background: var(--accent);" onclick="app.initDisplay()">Masuk Display</button>
+            </div>
+        </div>
+        
+        <button id="install-btn" class="hidden" onclick="pwa.install()">⬇️ Install Aplikasi</button>
+    </div>
+
+    <!-- LAYAR 2: OPERATOR -->
+    <div id="operator-screen" class="hidden">
+        <div class="op-header">
+            <div>
+                <h2 style="color:var(--dark-bg)">Panel Petugas</h2>
+                <small style="color:var(--text-muted)">Kontrol antrian</small>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button class="btn" style="background:#cbd5e1; color:#334155; padding: 10px;" onclick="app.toggleSound()">
+                    <span id="sound-icon">🔊</span>
+                </button>
+                <button class="btn" style="background:var(--dark-bg); color:white; padding: 0 15px;" onclick="location.reload()">
+                    Keluar
+                </button>
+            </div>
+        </div>
+
+        <div class="grid-counters" id="operator-grid">
+            <!-- Counter cards will be injected here -->
+        </div>
+        
+        <div style="margin-top: 2rem; text-align: center;">
+            <button class="btn btn-reset" onclick="if(confirm('Reset semua antrian ke 0?')) app.resetAll()">
+                ⚠️ Reset Semua Data Antrian
+            </button>
+        </div>
+    </div>
+
+    <!-- LAYAR 3: DISPLAY TV -->
+    <div id="display-screen" class="hidden">
+        <div class="display-main">
+            <div class="tv-label">NOMOR ANTRIAN</div>
+            <div id="tv-number" class="tv-number">--</div>
+            <div id="tv-counter" class="tv-counter-name">Menunggu...</div>
+        </div>
+        <div class="display-sidebar">
+            <div class="sidebar-title">Riwayat Panggilan</div>
+            <div id="tv-history">
+                <!-- History items -->
+            </div>
+        </div>
+        <!-- Floating fullscreen toggle for safety -->
+        <button class="btn" style="position:fixed; top:20px; right:20px; opacity:0.3; background:white; color:black; padding:5px;" onclick="app.toggleFullscreen()">⛶</button>
+    </div>
+
+    <script>
+        /**
+         * LOGIKA APLIKASI UTAMA
+         * Menggunakan LocalStorage untuk persistensi dan event 'storage' untuk sinkronisasi antar tab.
+         */
+        const app = {
+            data: {
+                counters: [
+                    { id: 'A', name: 'Customer Service', current: 0, color: '#4361ee' },
+                    { id: 'B', name: 'Teller 1', current: 0, color: '#f72585' },
+                    { id: 'C', name: 'Teller 2', current: 0, color: '#4cc9f0' }
+                ],
+                lastCalled: null, // { id: 'A', number: 5, timestamp: 123 }
+                history: [],
+                soundEnabled: true
+            },
+            
+            mode: null, // 'operator' or 'display'
+            speechSynth: window.speechSynthesis,
+            voices: [],
+
+            init() {
+                this.loadData();
+                this.setupVoices();
+                
+                // Listener untuk sinkronisasi antar Tab/Window
+                window.addEventListener('storage', (e) => {
+                    if (e.key === 'q_system_data') {
+                        this.data = JSON.parse(e.newValue);
+                        if (this.mode === 'display') this.renderDisplay(true); // true = animate
+                        if (this.mode === 'operator') this.renderOperator();
+                    }
+                });
+            },
+
+            loadData() {
+                const stored = localStorage.getItem('q_system_data');
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    // Merge saved counts with structure (in case structure changed)
+                    this.data.counters.forEach((c, idx) => {
+                        if(parsed.counters[idx]) c.current = parsed.counters[idx].current;
+                    });
+                    this.data.lastCalled = parsed.lastCalled;
+                    this.data.history = parsed.history || [];
+                }
+            },
+
+            saveData() {
+                localStorage.setItem('q_system_data', JSON.stringify(this.data));
+            },
+
+            // --- NAVIGATION ---
+
+            initOperator() {
+                this.mode = 'operator';
+                document.getElementById('setup-screen').classList.add('hidden');
+                document.getElementById('operator-screen').classList.remove('hidden');
+                this.renderOperator();
+            },
+
+            initDisplay() {
+                this.mode = 'display';
+                document.getElementById('setup-screen').classList.add('hidden');
+                document.getElementById('display-screen').classList.remove('hidden');
+                this.toggleFullscreen();
+                this.renderDisplay(false);
+                
+                // Hack: Play silent audio to unlock AudioContext on iOS/Android
+                this.speak(" ");
+            },
+
+            toggleFullscreen() {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(e => console.log(e));
+                } else {
+                    if (document.exitFullscreen) document.exitFullscreen();
+                }
+            },
+
+            // --- CORE LOGIC ---
+
+            nextQueue(index) {
+                const counter = this.data.counters[index];
+                counter.current++;
+                
+                const callData = {
+                    counterId: counter.id,
+                    counterName: counter.name,
+                    number: counter.current,
+                    timestamp: Date.now()
+                };
+
+                this.data.lastCalled = callData;
+                this.data.history.unshift(callData);
+                if(this.data.history.length > 5) this.data.history.pop();
+
+                this.saveData();
+                this.renderOperator();
+                
+                // Operator juga mendengar feedback tapi kecil (opsional), 
+                // tapi biasanya display yang bersuara. Kita disable suara di operator by default logic, 
+                // tapi karena ini single file, kita biarkan logic suara jalan jika 'soundEnabled' true.
+            },
+
+            recall(index) {
+                const counter = this.data.counters[index];
+                if(counter.current === 0) return;
+
+                const callData = {
+                    counterId: counter.id,
+                    counterName: counter.name,
+                    number: counter.current,
+                    timestamp: Date.now() // Update timestamp to trigger storage event
+                };
+                
+                this.data.lastCalled = callData;
+                this.saveData();
+                // No history update on recall
+            },
+
+            resetCounter(index) {
+                if(confirm('Reset antrian loket ' + this.data.counters[index].id + '?')) {
+                    this.data.counters[index].current = 0;
+                    this.saveData();
+                    this.renderOperator();
+                }
+            },
+
+            resetAll() {
+                this.data.counters.forEach(c => c.current = 0);
+                this.data.lastCalled = null;
+                this.data.history = [];
+                this.saveData();
+                this.renderOperator();
+            },
+
+            // --- RENDERING ---
+
+            formatNumber(prefix, num) {
+                return `${prefix}${String(num).padStart(3, '0')}`;
+            },
+
+            renderOperator() {
+                const grid = document.getElementById('operator-grid');
+                grid.innerHTML = '';
+
+                this.data.counters.forEach((c, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'counter-card';
+                    card.innerHTML = `
+                        <div class="counter-header">
+                            <span>LOKET ${c.id}</span>
+                            <span style="font-weight:400; font-size:0.9rem;">${c.name}</span>
+                        </div>
+                        <div class="current-num">${this.formatNumber(c.id, c.current)}</div>
+                        <div class="counter-actions">
+                            <button class="btn btn-next" onclick="app.nextQueue(${index})">
+                                PANGGIL BERIKUTNYA ➜
+                            </button>
+                            <button class="btn btn-recall" onclick="app.recall(${index})">
+                                📢 Panggil Ulang
+                            </button>
+                            <button class="btn btn-reset" onclick="app.resetCounter(${index})">
+                                ↺ Reset
+                            </button>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            },
+
+            renderDisplay(animate) {
+                const last = this.data.lastCalled;
+                const tvNum = document.getElementById('tv-number');
+                const tvCounter = document.getElementById('tv-counter');
+                const tvHistory = document.getElementById('tv-history');
+
+                if (last) {
+                    const text = this.formatNumber(last.counterId, last.number);
+                    
+                    // Cek jika nomor berubah atau baru load
+                    if (tvNum.innerText !== text || animate) {
+                        tvNum.innerText = text;
+                        tvCounter.innerText = `LOKET ${last.counterId}`;
+                        
+                        // Animasi visual
+                        tvNum.classList.remove('animate');
+                        void tvNum.offsetWidth; // trigger reflow
+                        tvNum.classList.add('animate');
+                        
+                        // Sound logic only on Display Mode
+                        if (this.mode === 'display') {
+                            this.announce(last);
+                        }
+                    }
+                } else {
+                    tvNum.innerText = "--";
+                    tvCounter.innerText = "Menunggu Antrian";
+                }
+
+                // Render History
+                tvHistory.innerHTML = this.data.history.map(h => `
+                    <div class="history-item">
+                        <span class="hist-num">${this.formatNumber(h.counterId, h.number)}</span>
+                        <span class="hist-loc">LOKET ${h.counterId}</span>
+                    </div>
+                `).join('');
+            },
+
+            // --- AUDIO SYSTEM ---
+
+            setupVoices() {
+                // Fetch voices (async process in Chrome)
+                const populate = () => {
+                    this.voices = this.speechSynth.getVoices();
+                };
+                populate();
+                if (speechSynthesis.onvoiceschanged !== undefined) {
+                    speechSynthesis.onvoiceschanged = populate;
+                }
+            },
+
+            toggleSound() {
+                this.soundEnabled = !this.soundEnabled;
+                document.getElementById('sound-icon').innerText = this.soundEnabled ? '🔊' : '🔇';
+            },
+
+            speak(text, counterId) {
+                if (!this.soundEnabled) return;
+                
+                // Cancel previous speech to prevent overlapping queues becoming messy
+                this.speechSynth.cancel();
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'id-ID';
+                utterance.rate = 0.9; // Sedikit lebih lambat agar jelas
+
+                // Basic voice variation logic
+                // Try to find Google Bahasa Indonesia, or fallback
+                const indoVoice = this.voices.find(v => v.lang.includes('id-ID'));
+                if (indoVoice) utterance.voice = indoVoice;
+
+                // Pitch variation based on Counter ID (A=Normal, B=Lower, C=Higher)
+                if (counterId === 'B') utterance.pitch = 0.8; 
+                else if (counterId === 'C') utterance.pitch = 1.2;
+                else utterance.pitch = 1.0;
+
+                this.speechSynth.speak(utterance);
+            },
+
+            announce(data) {
+                // Format: "Nomor antrian... A... Kosong Kosong Satu... Silakan menuju loket... A"
+                
+                // Convert number 123 to "Satu Dua Tiga" string for clearer audio? 
+                // Or standard number reading. Let's use separated digits for clarity like "A - Nol Nol Satu"
+                
+                const numStr = String(data.number).padStart(3, '0');
+                // Spasi di antara angka agar dibaca terpisah: "0 0 1"
+                const spelledNumber = numStr.split('').join(' '); 
+
+                const sentence = `Nomor antrian, ${data.counterId}, ${spelledNumber}. Silakan menuju loket ${data.counterId}`;
+                
+                this.speak(sentence, data.counterId);
+            }
+        };
+
+        app.init();
+
+        /**
+         * PWA CONFIGURATION (INLINE)
+         * Membuat manifest dan service worker secara dinamis tanpa file eksternal.
+         */
+        const pwa = {
+            init() {
+                this.injectManifest();
+                this.registerSW();
+                
+                // Install prompt handler
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    this.deferredPrompt = e;
+                    document.getElementById('install-btn').classList.remove('hidden');
+                });
+            },
+
+            install() {
+                if (this.deferredPrompt) {
+                    this.deferredPrompt.prompt();
+                    this.deferredPrompt.userChoice.then(() => {
+                        this.deferredPrompt = null;
+                        document.getElementById('install-btn').classList.add('hidden');
+                    });
+                }
+            },
+
+            injectManifest() {
+                const manifest = {
+                    "name": "Q-System Antrian",
+                    "short_name": "Q-System",
+                    "start_url": ".",
+                    "display": "standalone",
+                    "background_color": "#0f172a",
+                    "theme_color": "#1a1a2e",
+                    "icons": [{
+                        "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%234361ee'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='256' fill='white' font-weight='bold'%3EQ%3C/text%3E%3C/svg%3E",
+                        "sizes": "192x192",
+                        "type": "image/svg+xml"
+                    }]
+                };
+                const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+                const link = document.createElement('link');
+                link.rel = 'manifest';
+                link.href = URL.createObjectURL(blob);
+                document.head.appendChild(link);
+            },
+
+            registerSW() {
+                if ('serviceWorker' in navigator) {
+                    // Simple inline Service Worker logic: cache first
+                    const swCode = `
+                        self.addEventListener('install', e => self.skipWaiting());
+                        self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
+                    `;
+                    const blob = new Blob([swCode], {type: 'application/javascript'});
+                    navigator.serviceWorker.register(URL.createObjectURL(blob))
+                        .catch(err => console.log('SW Fail', err));
+                }
+            }
+        };
+
+        pwa.init();
+    </script>
+</body>
+</html>
