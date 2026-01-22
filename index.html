@@ -277,6 +277,11 @@
         <h1 style="margin-bottom: 0.5rem;">Q-System</h1>
         <p class="setup-title">Sistem Antrian Tanpa Server</p>
         
+        <!-- Tombol Tes Suara Awal -->
+        <button class="btn" style="background: rgba(255,255,255,0.1); color: #94a3b8; margin-bottom: 1rem; font-size: 0.8rem; padding: 5px 15px;" onclick="app.testSound()">
+            🔊 Cek Audio Browser
+        </button>
+
         <div class="mode-grid">
             <!-- Kartu Operator -->
             <div class="mode-card">
@@ -334,7 +339,10 @@
             <div id="tv-counter" class="tv-counter-name">Menunggu...</div>
         </div>
         <div class="display-sidebar">
-            <div class="sidebar-title">Riwayat Panggilan</div>
+            <div class="sidebar-title">
+                Riwayat Panggilan
+                <button class="btn" style="float:right; font-size:0.8rem; background:rgba(255,255,255,0.1); color:white;" onclick="app.testSound()">🔊 Tes Suara</button>
+            </div>
             <div id="tv-history">
                 <!-- History items -->
             </div>
@@ -363,6 +371,7 @@
             mode: null, // 'operator' or 'display'
             speechSynth: window.speechSynthesis,
             voices: [],
+            currentUtterance: null, // Keep reference to prevent GC
 
             init() {
                 this.loadData();
@@ -411,8 +420,8 @@
                 this.toggleFullscreen();
                 this.renderDisplay(false);
                 
-                // Hack: Play silent audio to unlock AudioContext on iOS/Android
-                this.speak(" ");
+                // Trigger awal untuk "memancing" izin audio di browser (terutama Mobile/Safari)
+                this.speak("Sistem Antrian Siap");
             },
 
             toggleFullscreen() {
@@ -442,10 +451,6 @@
 
                 this.saveData();
                 this.renderOperator();
-                
-                // Operator juga mendengar feedback tapi kecil (opsional), 
-                // tapi biasanya display yang bersuara. Kita disable suara di operator by default logic, 
-                // tapi karena ini single file, kita biarkan logic suara jalan jika 'soundEnabled' true.
             },
 
             recall(index) {
@@ -461,7 +466,6 @@
                 
                 this.data.lastCalled = callData;
                 this.saveData();
-                // No history update on recall
             },
 
             resetCounter(index) {
@@ -559,11 +563,20 @@
                 // Fetch voices (async process in Chrome)
                 const populate = () => {
                     this.voices = this.speechSynth.getVoices();
+                    console.log("Voices loaded:", this.voices.length);
                 };
+                
                 populate();
+                // Beberapa browser memuat voice secara asinkron
                 if (speechSynthesis.onvoiceschanged !== undefined) {
                     speechSynthesis.onvoiceschanged = populate;
                 }
+            },
+
+            testSound() {
+                this.speak("Tes audio sistem antrian. Satu, dua, tiga.");
+                // Jika masih tidak bunyi, cek console
+                console.log("Test sound triggered");
             },
 
             toggleSound() {
@@ -574,31 +587,52 @@
             speak(text, counterId) {
                 if (!this.soundEnabled) return;
                 
-                // Cancel previous speech to prevent overlapping queues becoming messy
+                // Batalkan antrian suara sebelumnya agar tidak tumpang tindih
                 this.speechSynth.cancel();
 
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'id-ID';
-                utterance.rate = 0.9; // Sedikit lebih lambat agar jelas
+                // Pastikan voices sudah terload, jika belum coba load lagi
+                if(this.voices.length === 0) {
+                    this.voices = this.speechSynth.getVoices();
+                }
 
-                // Basic voice variation logic
-                // Try to find Google Bahasa Indonesia, or fallback
-                const indoVoice = this.voices.find(v => v.lang.includes('id-ID'));
-                if (indoVoice) utterance.voice = indoVoice;
+                const utterance = new SpeechSynthesisUtterance(text);
+                // Simpan referensi ke variabel global untuk mencegah Garbage Collection memotong suara di tengah jalan
+                this.currentUtterance = utterance;
+
+                utterance.rate = 0.9; // Sedikit lebih lambat agar jelas
+                
+                // Logic pemilihan suara yang lebih robust
+                let selectedVoice = null;
+                
+                // 1. Cari Bahasa Indonesia spesifik
+                selectedVoice = this.voices.find(v => v.lang.includes('id-ID'));
+                
+                // 2. Jika tidak ada, cari Bahasa Melayu (mirip)
+                if (!selectedVoice) selectedVoice = this.voices.find(v => v.lang.includes('ms-MY'));
+                
+                // 3. Jika tidak ada, biarkan default (biasanya Inggris, tapi setidaknya bunyi)
+                
+                if (selectedVoice) {
+                    utterance.voice = selectedVoice;
+                    utterance.lang = selectedVoice.lang;
+                }
 
                 // Pitch variation based on Counter ID (A=Normal, B=Lower, C=Higher)
-                if (counterId === 'B') utterance.pitch = 0.8; 
-                else if (counterId === 'C') utterance.pitch = 1.2;
+                // Dikurangi range-nya agar tidak terdengar aneh di suara robotik tertentu
+                if (counterId === 'B') utterance.pitch = 0.9; 
+                else if (counterId === 'C') utterance.pitch = 1.1;
                 else utterance.pitch = 1.0;
+
+                // Error handling
+                utterance.onerror = (e) => {
+                    console.error('Speech Error:', e);
+                };
 
                 this.speechSynth.speak(utterance);
             },
 
             announce(data) {
                 // Format: "Nomor antrian... A... Kosong Kosong Satu... Silakan menuju loket... A"
-                
-                // Convert number 123 to "Satu Dua Tiga" string for clearer audio? 
-                // Or standard number reading. Let's use separated digits for clarity like "A - Nol Nol Satu"
                 
                 const numStr = String(data.number).padStart(3, '0');
                 // Spasi di antara angka agar dibaca terpisah: "0 0 1"
